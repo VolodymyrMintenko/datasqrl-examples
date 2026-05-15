@@ -15,5 +15,9 @@
   },
   "test-runner": {
     "delay-sec": 200
+  },
+    "schedule": {
+    "cron": "0 2 * * *",
+    "tz": "Europe/Kyiv"
   }
 }
