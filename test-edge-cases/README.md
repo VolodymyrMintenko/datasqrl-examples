@@ -13,11 +13,11 @@ python3 generate.py
 
 ## Scripts
 
-| Script | Domains | Metric columns per domain | Lines | Package file |
-| :--- | ---: | ---: | ---: | :--- |
-| `edge-large.sqrl` | 36 | 156 | ~49 500 | `edge-large-package.json` |
-| `edge-medium.sqrl` | 6 | 60 | ~3 700 | `edge-medium-package.json` |
-| `edge-baseline.sqrl` | 1 | 12 | ~260 | `edge-baseline-package.json` |
+| Script | Domains | Metric columns per domain | Lines | Tables | Package file |
+| :--- | ---: | ---: | ---: | ---: | :--- |
+| `edge-large.sqrl` | 18 | 160 | ~50 100 | 40 | `edge-large-package.json` |
+| `edge-medium.sqrl` | 4 | 40 | ~3 000 | 12 | `edge-medium-package.json` |
+| `edge-baseline.sqrl` | 1 | 12 | ~330 | 6 | `edge-baseline-package.json` |
 
 `edge-large` is the actual test target. `edge-medium` is the fallback if the
 large one does not compile, and `edge-baseline` is the control for comparing
@@ -25,27 +25,24 @@ compile and deployment times against a trivial project of the same shape.
 
 ## What one domain looks like
 
-Every domain repeats the same six-step shape, so the three scripts differ only
-in size:
+The line count comes from the width of the tables and from the bucketing
+expressions, not from the number of tables. Every domain is just two tables:
 
 1. `_RawNN` — a `datagen` source table with 8 string dimensions and N `DOUBLE`
    metric columns, 2 rows per second.
-2. `_EnrichedNN` — a per-metric expression over the source.
-3. `MetricsNN` — a 30 second `TUMBLE` aggregate with a `SUM` per metric.
+2. `MetricsNN` — a 30 second `TUMBLE` aggregate with one weighted `SUM` per
+   metric, where the weight comes from a 10 branch `CASE` over the value.
    Exposed in the API, keyed by `region, window_end`.
-4. `_DetailNN` — a second `TUMBLE` aggregate with `AVG` and `MAX` per metric.
-   Internal, and `SummaryNN` exposes a narrow projection of it.
-5. `_RollingNN` — a 5 minute `HOP` window over the first 12 metrics, with
-   `LatestNN` deduplicating it per device.
-6. `_AlertsNN` — a filter over `MetricsNN`. The first four domains export it to
-   the logger.
+
+Domain 01 additionally carries the shapes the other domains do not need to
+repeat: `_Rolling01` (a 5 minute `HOP` window), `Latest01` (a `DISTINCT` over
+it, with `query_by_all`), and `_Alerts01` exported to the logger.
 
 The end of each script adds the query surface: `MetricsByRegion` and
 `LatestByDevice` as parameterized query functions, `RegionTotals` as a union
-across the first domains, and `HighMetricAlert` as a subscription.
-
-`edge-large` totals 36 source tables and 252 derived definitions, of which 108
-are exposed in the API.
+across the first domains, and `HighMetricAlert` as a subscription. Query
+functions do not create tables of their own, and the subscription becomes a
+Kafka topic rather than a Postgres table.
 
 ## Extra package file
 
@@ -68,9 +65,14 @@ the artifacts they produce:
 
 | Script | Compile time | Postgres tables | GraphQL schema | Flink compiled plan |
 | :--- | ---: | ---: | ---: | ---: |
-| `edge-baseline.sqrl` | 3 s | 4 | 111 lines, 7 types | 104 KB |
-| `edge-medium.sqrl` | 7 s | 19 | 664 lines, 22 types | 1.2 MB |
-| `edge-large.sqrl` | 50 s | 109 | 7 150 lines, 112 types | 14 MB |
+| `edge-baseline.sqrl` | 4 s | 3 | 99 lines, 6 types | 180 KB |
+| `edge-medium.sqrl` | 7 s | 6 | 277 lines, 9 types | 1.7 MB |
+| `edge-large.sqrl` | 129 s | 20 | 3 137 lines, 23 types | 28 MB |
 
-Compilation emits a `NOTICE` per domain about `Metrics{NN}[window_time]` not
-propagating the source row time. It is informational, the build succeeds.
+Compilation emits a `NOTICE` about `Metrics01[window_time]` not propagating the
+source row time. It is informational, the build succeeds.
+
+The local CLI does not check the Postgres connection budget. The platform does,
+and rejects a plan whose scaling needs more connections than the configured
+instance size allows (`dev` and `small` 100, `medium` 200, `large` 300,
+`xlarge` 600).

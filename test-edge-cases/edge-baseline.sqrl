@@ -102,105 +102,174 @@ CREATE TABLE _Raw01 (
   'fields.metric_012.max' = '1000.0'
 );
 
-_Enriched01 := SELECT
-  eventId,
-  deviceId,
-  region,
-  category,
-  dim_01,
-  dim_02,
-  dim_03,
-  dim_04,
-  dim_05,
-  dim_06,
-  dim_07,
-  dim_08,
-  metric_001 * 1.0 + 1.0 AS metric_001,
-  metric_002 * 1.0 + 2.0 AS metric_002,
-  metric_003 * 1.0 + 3.0 AS metric_003,
-  metric_004 * 1.0 + 4.0 AS metric_004,
-  metric_005 * 1.0 + 5.0 AS metric_005,
-  metric_006 * 1.0 + 6.0 AS metric_006,
-  metric_007 * 1.0 + 7.0 AS metric_007,
-  metric_008 * 1.0 + 8.0 AS metric_008,
-  metric_009 * 1.0 + 9.0 AS metric_009,
-  metric_010 * 1.0 + 10.0 AS metric_010,
-  metric_011 * 1.0 + 11.0 AS metric_011,
-  metric_012 * 1.0 + 12.0 AS metric_012,
-  event_time
-FROM _Raw01;
-
-/** Tumbling 30 second totals for domain 01, keyed by region. */
+/** Weighted 30 second totals for domain 01, keyed by region. */
 /*+primary_key(region, window_end) */
 Metrics01 := SELECT
   region,
   window_start,
   window_end,
   window_time,
-  SUM(metric_001) AS sum_metric_001,
-  SUM(metric_002) AS sum_metric_002,
-  SUM(metric_003) AS sum_metric_003,
-  SUM(metric_004) AS sum_metric_004,
-  SUM(metric_005) AS sum_metric_005,
-  SUM(metric_006) AS sum_metric_006,
-  SUM(metric_007) AS sum_metric_007,
-  SUM(metric_008) AS sum_metric_008,
-  SUM(metric_009) AS sum_metric_009,
-  SUM(metric_010) AS sum_metric_010,
-  SUM(metric_011) AS sum_metric_011,
-  SUM(metric_012) AS sum_metric_012,
+  SUM(CASE
+    WHEN metric_001 > 900.0 THEN metric_001 * 2.00
+    WHEN metric_001 > 800.0 THEN metric_001 * 1.90
+    WHEN metric_001 > 700.0 THEN metric_001 * 1.80
+    WHEN metric_001 > 600.0 THEN metric_001 * 1.70
+    WHEN metric_001 > 500.0 THEN metric_001 * 1.60
+    WHEN metric_001 > 400.0 THEN metric_001 * 1.50
+    WHEN metric_001 > 300.0 THEN metric_001 * 1.40
+    WHEN metric_001 > 200.0 THEN metric_001 * 1.30
+    WHEN metric_001 > 100.0 THEN metric_001 * 1.20
+    WHEN metric_001 > 0.0 THEN metric_001 * 1.10
+    ELSE metric_001
+  END) AS sum_metric_001,
+  SUM(CASE
+    WHEN metric_002 > 900.0 THEN metric_002 * 2.00
+    WHEN metric_002 > 800.0 THEN metric_002 * 1.90
+    WHEN metric_002 > 700.0 THEN metric_002 * 1.80
+    WHEN metric_002 > 600.0 THEN metric_002 * 1.70
+    WHEN metric_002 > 500.0 THEN metric_002 * 1.60
+    WHEN metric_002 > 400.0 THEN metric_002 * 1.50
+    WHEN metric_002 > 300.0 THEN metric_002 * 1.40
+    WHEN metric_002 > 200.0 THEN metric_002 * 1.30
+    WHEN metric_002 > 100.0 THEN metric_002 * 1.20
+    WHEN metric_002 > 0.0 THEN metric_002 * 1.10
+    ELSE metric_002
+  END) AS sum_metric_002,
+  SUM(CASE
+    WHEN metric_003 > 900.0 THEN metric_003 * 2.00
+    WHEN metric_003 > 800.0 THEN metric_003 * 1.90
+    WHEN metric_003 > 700.0 THEN metric_003 * 1.80
+    WHEN metric_003 > 600.0 THEN metric_003 * 1.70
+    WHEN metric_003 > 500.0 THEN metric_003 * 1.60
+    WHEN metric_003 > 400.0 THEN metric_003 * 1.50
+    WHEN metric_003 > 300.0 THEN metric_003 * 1.40
+    WHEN metric_003 > 200.0 THEN metric_003 * 1.30
+    WHEN metric_003 > 100.0 THEN metric_003 * 1.20
+    WHEN metric_003 > 0.0 THEN metric_003 * 1.10
+    ELSE metric_003
+  END) AS sum_metric_003,
+  SUM(CASE
+    WHEN metric_004 > 900.0 THEN metric_004 * 2.00
+    WHEN metric_004 > 800.0 THEN metric_004 * 1.90
+    WHEN metric_004 > 700.0 THEN metric_004 * 1.80
+    WHEN metric_004 > 600.0 THEN metric_004 * 1.70
+    WHEN metric_004 > 500.0 THEN metric_004 * 1.60
+    WHEN metric_004 > 400.0 THEN metric_004 * 1.50
+    WHEN metric_004 > 300.0 THEN metric_004 * 1.40
+    WHEN metric_004 > 200.0 THEN metric_004 * 1.30
+    WHEN metric_004 > 100.0 THEN metric_004 * 1.20
+    WHEN metric_004 > 0.0 THEN metric_004 * 1.10
+    ELSE metric_004
+  END) AS sum_metric_004,
+  SUM(CASE
+    WHEN metric_005 > 900.0 THEN metric_005 * 2.00
+    WHEN metric_005 > 800.0 THEN metric_005 * 1.90
+    WHEN metric_005 > 700.0 THEN metric_005 * 1.80
+    WHEN metric_005 > 600.0 THEN metric_005 * 1.70
+    WHEN metric_005 > 500.0 THEN metric_005 * 1.60
+    WHEN metric_005 > 400.0 THEN metric_005 * 1.50
+    WHEN metric_005 > 300.0 THEN metric_005 * 1.40
+    WHEN metric_005 > 200.0 THEN metric_005 * 1.30
+    WHEN metric_005 > 100.0 THEN metric_005 * 1.20
+    WHEN metric_005 > 0.0 THEN metric_005 * 1.10
+    ELSE metric_005
+  END) AS sum_metric_005,
+  SUM(CASE
+    WHEN metric_006 > 900.0 THEN metric_006 * 2.00
+    WHEN metric_006 > 800.0 THEN metric_006 * 1.90
+    WHEN metric_006 > 700.0 THEN metric_006 * 1.80
+    WHEN metric_006 > 600.0 THEN metric_006 * 1.70
+    WHEN metric_006 > 500.0 THEN metric_006 * 1.60
+    WHEN metric_006 > 400.0 THEN metric_006 * 1.50
+    WHEN metric_006 > 300.0 THEN metric_006 * 1.40
+    WHEN metric_006 > 200.0 THEN metric_006 * 1.30
+    WHEN metric_006 > 100.0 THEN metric_006 * 1.20
+    WHEN metric_006 > 0.0 THEN metric_006 * 1.10
+    ELSE metric_006
+  END) AS sum_metric_006,
+  SUM(CASE
+    WHEN metric_007 > 900.0 THEN metric_007 * 2.00
+    WHEN metric_007 > 800.0 THEN metric_007 * 1.90
+    WHEN metric_007 > 700.0 THEN metric_007 * 1.80
+    WHEN metric_007 > 600.0 THEN metric_007 * 1.70
+    WHEN metric_007 > 500.0 THEN metric_007 * 1.60
+    WHEN metric_007 > 400.0 THEN metric_007 * 1.50
+    WHEN metric_007 > 300.0 THEN metric_007 * 1.40
+    WHEN metric_007 > 200.0 THEN metric_007 * 1.30
+    WHEN metric_007 > 100.0 THEN metric_007 * 1.20
+    WHEN metric_007 > 0.0 THEN metric_007 * 1.10
+    ELSE metric_007
+  END) AS sum_metric_007,
+  SUM(CASE
+    WHEN metric_008 > 900.0 THEN metric_008 * 2.00
+    WHEN metric_008 > 800.0 THEN metric_008 * 1.90
+    WHEN metric_008 > 700.0 THEN metric_008 * 1.80
+    WHEN metric_008 > 600.0 THEN metric_008 * 1.70
+    WHEN metric_008 > 500.0 THEN metric_008 * 1.60
+    WHEN metric_008 > 400.0 THEN metric_008 * 1.50
+    WHEN metric_008 > 300.0 THEN metric_008 * 1.40
+    WHEN metric_008 > 200.0 THEN metric_008 * 1.30
+    WHEN metric_008 > 100.0 THEN metric_008 * 1.20
+    WHEN metric_008 > 0.0 THEN metric_008 * 1.10
+    ELSE metric_008
+  END) AS sum_metric_008,
+  SUM(CASE
+    WHEN metric_009 > 900.0 THEN metric_009 * 2.00
+    WHEN metric_009 > 800.0 THEN metric_009 * 1.90
+    WHEN metric_009 > 700.0 THEN metric_009 * 1.80
+    WHEN metric_009 > 600.0 THEN metric_009 * 1.70
+    WHEN metric_009 > 500.0 THEN metric_009 * 1.60
+    WHEN metric_009 > 400.0 THEN metric_009 * 1.50
+    WHEN metric_009 > 300.0 THEN metric_009 * 1.40
+    WHEN metric_009 > 200.0 THEN metric_009 * 1.30
+    WHEN metric_009 > 100.0 THEN metric_009 * 1.20
+    WHEN metric_009 > 0.0 THEN metric_009 * 1.10
+    ELSE metric_009
+  END) AS sum_metric_009,
+  SUM(CASE
+    WHEN metric_010 > 900.0 THEN metric_010 * 2.00
+    WHEN metric_010 > 800.0 THEN metric_010 * 1.90
+    WHEN metric_010 > 700.0 THEN metric_010 * 1.80
+    WHEN metric_010 > 600.0 THEN metric_010 * 1.70
+    WHEN metric_010 > 500.0 THEN metric_010 * 1.60
+    WHEN metric_010 > 400.0 THEN metric_010 * 1.50
+    WHEN metric_010 > 300.0 THEN metric_010 * 1.40
+    WHEN metric_010 > 200.0 THEN metric_010 * 1.30
+    WHEN metric_010 > 100.0 THEN metric_010 * 1.20
+    WHEN metric_010 > 0.0 THEN metric_010 * 1.10
+    ELSE metric_010
+  END) AS sum_metric_010,
+  SUM(CASE
+    WHEN metric_011 > 900.0 THEN metric_011 * 2.00
+    WHEN metric_011 > 800.0 THEN metric_011 * 1.90
+    WHEN metric_011 > 700.0 THEN metric_011 * 1.80
+    WHEN metric_011 > 600.0 THEN metric_011 * 1.70
+    WHEN metric_011 > 500.0 THEN metric_011 * 1.60
+    WHEN metric_011 > 400.0 THEN metric_011 * 1.50
+    WHEN metric_011 > 300.0 THEN metric_011 * 1.40
+    WHEN metric_011 > 200.0 THEN metric_011 * 1.30
+    WHEN metric_011 > 100.0 THEN metric_011 * 1.20
+    WHEN metric_011 > 0.0 THEN metric_011 * 1.10
+    ELSE metric_011
+  END) AS sum_metric_011,
+  SUM(CASE
+    WHEN metric_012 > 900.0 THEN metric_012 * 2.00
+    WHEN metric_012 > 800.0 THEN metric_012 * 1.90
+    WHEN metric_012 > 700.0 THEN metric_012 * 1.80
+    WHEN metric_012 > 600.0 THEN metric_012 * 1.70
+    WHEN metric_012 > 500.0 THEN metric_012 * 1.60
+    WHEN metric_012 > 400.0 THEN metric_012 * 1.50
+    WHEN metric_012 > 300.0 THEN metric_012 * 1.40
+    WHEN metric_012 > 200.0 THEN metric_012 * 1.30
+    WHEN metric_012 > 100.0 THEN metric_012 * 1.20
+    WHEN metric_012 > 0.0 THEN metric_012 * 1.10
+    ELSE metric_012
+  END) AS sum_metric_012,
   COUNT(*) AS record_count
 FROM TABLE(
-  TUMBLE(TABLE _Enriched01, DESCRIPTOR(event_time), INTERVAL '30' SECOND)
+  TUMBLE(TABLE _Raw01, DESCRIPTOR(event_time), INTERVAL '30' SECOND)
 )
 GROUP BY region, window_start, window_end, window_time;
-
-/*+primary_key(region, window_end) */
-_Detail01 := SELECT
-  region,
-  window_start,
-  window_end,
-  window_time,
-  AVG(metric_001) AS avg_metric_001,
-  MAX(metric_001) AS max_metric_001,
-  AVG(metric_002) AS avg_metric_002,
-  MAX(metric_002) AS max_metric_002,
-  AVG(metric_003) AS avg_metric_003,
-  MAX(metric_003) AS max_metric_003,
-  AVG(metric_004) AS avg_metric_004,
-  MAX(metric_004) AS max_metric_004,
-  AVG(metric_005) AS avg_metric_005,
-  MAX(metric_005) AS max_metric_005,
-  AVG(metric_006) AS avg_metric_006,
-  MAX(metric_006) AS max_metric_006,
-  AVG(metric_007) AS avg_metric_007,
-  MAX(metric_007) AS max_metric_007,
-  AVG(metric_008) AS avg_metric_008,
-  MAX(metric_008) AS max_metric_008,
-  AVG(metric_009) AS avg_metric_009,
-  MAX(metric_009) AS max_metric_009,
-  AVG(metric_010) AS avg_metric_010,
-  MAX(metric_010) AS max_metric_010,
-  AVG(metric_011) AS avg_metric_011,
-  MAX(metric_011) AS max_metric_011,
-  AVG(metric_012) AS avg_metric_012,
-  MAX(metric_012) AS max_metric_012
-FROM TABLE(
-  TUMBLE(TABLE _Enriched01, DESCRIPTOR(event_time), INTERVAL '30' SECOND)
-)
-GROUP BY region, window_start, window_end, window_time;
-
-/** Narrow projection of the wide detail aggregate for domain 01. */
-/*+primary_key(region, window_end) */
-Summary01 := SELECT
-  region,
-  window_end,
-  window_time,
-  avg_metric_001,
-  max_metric_001,
-  avg_metric_002,
-  max_metric_002
-FROM _Detail01;
 
 _Rolling01 := SELECT
   deviceId,
@@ -218,7 +287,7 @@ _Rolling01 := SELECT
   MAX(metric_011) AS max_metric_011,
   MAX(metric_012) AS max_metric_012
 FROM TABLE(
-  HOP(TABLE _Enriched01, DESCRIPTOR(event_time), INTERVAL '1' MINUTE, INTERVAL '5' MINUTE)
+  HOP(TABLE _Raw01, DESCRIPTOR(event_time), INTERVAL '1' MINUTE, INTERVAL '5' MINUTE)
 )
 GROUP BY deviceId, window_start, window_end, window_time;
 

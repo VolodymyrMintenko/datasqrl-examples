@@ -2,8 +2,10 @@
 """Generates the SQRL scripts in this folder.
 
 Every script has the same shape and differs only in how many data domains it
-contains and how many metric columns each domain carries. Re-run after changing
-the VARIANTS table below.
+contains and how many metric columns each domain carries. Line count comes from
+the width of the tables and the bucketing expressions, not from the number of
+tables, so the scripts stay small in table count while being very long.
+Re-run after changing the VARIANTS table below.
 """
 
 from pathlib import Path
@@ -12,14 +14,14 @@ HERE = Path(__file__).parent
 
 # name -> (number of domains, metric columns per domain)
 VARIANTS = {
-    'edge-large': (36, 156),
-    'edge-medium': (6, 60),
+    'edge-large': (18, 160),
+    'edge-medium': (4, 40),
     'edge-baseline': (1, 12),
 }
 
 DIMS = 8
+CASE_BRANCHES = 10
 ROLLING_METRICS = 12
-EXPORTED_ALERT_DOMAINS = 4
 
 
 def metric(index):
@@ -64,33 +66,23 @@ def create_table(domain, metrics):
     )
 
 
-def enriched(domain, metrics):
-    lines = [
-        '  eventId,',
-        '  deviceId,',
-        '  region,',
-        '  category,',
-    ]
-    lines += [f'  dim_{i:02d},' for i in range(1, DIMS + 1)]
-    lines += [
-        f'  {metric(i)} * 1.0 + {i % 17}.0 AS {metric(i)},'
-        for i in range(1, metrics + 1)
-    ]
-    lines.append('  event_time')
-    return (
-        f'_Enriched{domain} := SELECT\n'
-        + '\n'.join(lines)
-        + f'\nFROM _Raw{domain};\n'
-    )
+def bucketed_sum(index):
+    """A weighted SUM where the weight depends on which band the value lands in."""
+    name = metric(index)
+    lines = [f'  SUM(CASE']
+    for branch in range(CASE_BRANCHES, 0, -1):
+        threshold = branch * 100.0 - 100.0
+        weight = 1.0 + branch / 10.0
+        lines.append(f'    WHEN {name} > {threshold:.1f} THEN {name} * {weight:.2f}')
+    lines.append(f'    ELSE {name}')
+    lines.append(f'  END) AS sum_{name},')
+    return '\n'.join(lines)
 
 
 def metrics_table(domain, metrics):
-    aggregates = [
-        f'  SUM({metric(i)}) AS sum_{metric(i)},' for i in range(1, metrics + 1)
-    ]
-    aggregates.append('  COUNT(*) AS record_count')
+    aggregates = [bucketed_sum(i) for i in range(1, metrics + 1)]
     return (
-        f'/** Tumbling 30 second totals for domain {domain}, keyed by region. */\n'
+        f'/** Weighted 30 second totals for domain {domain}, keyed by region. */\n'
         f'/*+primary_key(region, window_end) */\n'
         f'Metrics{domain} := SELECT\n'
         '  region,\n'
@@ -98,51 +90,16 @@ def metrics_table(domain, metrics):
         '  window_end,\n'
         '  window_time,\n'
         + '\n'.join(aggregates)
-        + f'\nFROM TABLE(\n'
-        f'  TUMBLE(TABLE _Enriched{domain}, DESCRIPTOR(event_time), INTERVAL \'30\' SECOND)\n'
+        + '\n  COUNT(*) AS record_count\n'
+        'FROM TABLE(\n'
+        f"  TUMBLE(TABLE _Raw{domain}, DESCRIPTOR(event_time), INTERVAL '30' SECOND)\n"
         ')\n'
         'GROUP BY region, window_start, window_end, window_time;\n'
     )
 
 
-def detail_table(domain, metrics):
-    aggregates = []
-    for i in range(1, metrics + 1):
-        aggregates.append(f'  AVG({metric(i)}) AS avg_{metric(i)},')
-        aggregates.append(f'  MAX({metric(i)}) AS max_{metric(i)},')
-    aggregates[-1] = aggregates[-1].rstrip(',')
-    return (
-        f'/*+primary_key(region, window_end) */\n'
-        f'_Detail{domain} := SELECT\n'
-        '  region,\n'
-        '  window_start,\n'
-        '  window_end,\n'
-        '  window_time,\n'
-        + '\n'.join(aggregates)
-        + f'\nFROM TABLE(\n'
-        f'  TUMBLE(TABLE _Enriched{domain}, DESCRIPTOR(event_time), INTERVAL \'30\' SECOND)\n'
-        ')\n'
-        'GROUP BY region, window_start, window_end, window_time;\n'
-    )
-
-
-def summary_table(domain):
-    return (
-        f'/** Narrow projection of the wide detail aggregate for domain {domain}. */\n'
-        f'/*+primary_key(region, window_end) */\n'
-        f'Summary{domain} := SELECT\n'
-        '  region,\n'
-        '  window_end,\n'
-        '  window_time,\n'
-        '  avg_metric_001,\n'
-        '  max_metric_001,\n'
-        '  avg_metric_002,\n'
-        '  max_metric_002\n'
-        f'FROM _Detail{domain};\n'
-    )
-
-
-def rolling_table(domain, metrics):
+def rolling_tables(domain, metrics):
+    """Only defined for the first domain, so the table count stays low."""
     count = min(ROLLING_METRICS, metrics)
     aggregates = [
         f'  MAX({metric(i)}) AS max_{metric(i)},' for i in range(1, count + 1)
@@ -153,48 +110,35 @@ def rolling_table(domain, metrics):
         '  deviceId,\n'
         '  window_time,\n'
         + '\n'.join(aggregates)
-        + f'\nFROM TABLE(\n'
-        f'  HOP(TABLE _Enriched{domain}, DESCRIPTOR(event_time), '
+        + '\nFROM TABLE(\n'
+        f'  HOP(TABLE _Raw{domain}, DESCRIPTOR(event_time), '
         "INTERVAL '1' MINUTE, INTERVAL '5' MINUTE)\n"
         ')\n'
         'GROUP BY deviceId, window_start, window_end, window_time;\n'
-    )
-
-
-def latest_table(domain):
-    return (
+        '\n'
         f'/** Latest rolling maxima per device for domain {domain}. */\n'
         f'/*+query_by_all(deviceId) */\n'
         f'Latest{domain} := DISTINCT _Rolling{domain} ON deviceId '
         'ORDER BY window_time DESC;\n'
-    )
-
-
-def alerts(domain, index):
-    block = (
+        '\n'
         f'_Alerts{domain} := SELECT region, window_end, sum_metric_001, record_count\n'
         f'FROM Metrics{domain} WHERE sum_metric_001 > 100000.0;\n'
+        '\n'
+        f'EXPORT _Alerts{domain} TO logger.alerts{domain};\n'
     )
-    if index <= EXPORTED_ALERT_DOMAINS:
-        block += f'\nEXPORT _Alerts{domain} TO logger.alerts{domain};\n'
-    return block
 
 
 def domain_block(index, metrics):
     domain = f'{index:02d}'
     parts = [
-        f'/* ============================================================\n'
+        '/* ============================================================\n'
         f'   Domain {domain}\n'
-        f'   ============================================================ */\n',
+        '   ============================================================ */\n',
         create_table(domain, metrics),
-        enriched(domain, metrics),
         metrics_table(domain, metrics),
-        detail_table(domain, metrics),
-        summary_table(domain),
-        rolling_table(domain, metrics),
-        latest_table(domain),
-        alerts(domain, index),
     ]
+    if index == 1:
+        parts.append(rolling_tables(domain, metrics))
     return '\n'.join(parts)
 
 
@@ -231,13 +175,13 @@ def queries(domains):
 
 def header(name, domains, metrics):
     return (
-        f'/*\n'
+        '/*\n'
         f'  {name}.sqrl - generated by generate.py, do not edit by hand.\n'
-        f'\n'
+        '\n'
         f'  {domains} data domains, {metrics} metric columns each, all fed by the\n'
-        f'  datagen connector so the project runs without any external system.\n'
-        f'  Used to test how the platform behaves on a large SQRL project.\n'
-        f'*/\n\n'
+        '  datagen connector so the project runs without any external system.\n'
+        '  Used to test how the platform behaves on a large SQRL project.\n'
+        '*/\n\n'
     )
 
 
@@ -247,4 +191,5 @@ for name, (domains, metrics) in VARIANTS.items():
     body += '\n' + queries(domains)
     target = HERE / f'{name}.sqrl'
     target.write_text(body)
-    print(f'{target.name}: {len(body.splitlines())} lines')
+    tables = domains * 2 + 3 + 1
+    print(f'{target.name}: {len(body.splitlines())} lines, {tables} tables')
