@@ -46,11 +46,15 @@ Kafka topic rather than a Postgres table.
 
 ## Extra package file
 
-`edge-parallelism-package.json` is an overlay, not a standalone project. Add it
-as a second package file after one of the ones above to raise
-`pipeline.max-parallelism` to 720 and switch task managers to `large` (4 slots).
-It changes which process instance counts the platform accepts, which is what
-the resize flow offers in the UI.
+The three package files above declare only the engines and the script. They do not
+set an `engines.<engine>.deployment` block, so the instance sizes come from the
+Pipeline Size chosen when the project is created, the way a normal project works.
+
+`edge-parallelism-package.json` is an overlay, not a standalone project. Add it as a
+second package file after one of the ones above to raise `pipeline.max-parallelism`
+to 720 and switch task managers to `large` (4 slots). It changes which process
+instance counts the platform accepts, and it is also the way to reproduce a
+`package.json` that overrides what the create-project form asked for.
 
 ## Compiling locally
 

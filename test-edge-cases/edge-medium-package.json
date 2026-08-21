@@ -1,6 +1,11 @@
 {
   "version": "1",
-  "enabled-engines": ["flink", "postgres", "kafka", "vertx"],
+  "enabled-engines": [
+    "flink",
+    "postgres",
+    "kafka",
+    "vertx"
+  ],
   "script": {
     "main": "edge-medium.sqrl"
   },
@@ -8,22 +13,6 @@
     "flink": {
       "config": {
         "table.exec.source.idle-timeout": "1 s"
-      },
-      "deployment": {
-        "jobmanager-size": "small",
-        "taskmanager-size": "medium",
-        "taskmanager-count": 1
-      }
-    },
-    "postgres": {
-      "deployment": {
-        "instance-size": "small"
-      }
-    },
-    "vertx": {
-      "deployment": {
-        "instance-size": "small",
-        "instance-count": 1
       }
     }
   }
