@@ -1,0 +1,14 @@
+{
+  "version": "1",
+  "engines": {
+    "flink": {
+      "config": {
+        "pipeline.max-parallelism": 720
+      },
+      "deployment": {
+        "taskmanager-size": "large",
+        "taskmanager-count": 2
+      }
+    }
+  }
+}

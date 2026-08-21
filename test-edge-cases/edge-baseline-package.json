@@ -1,0 +1,30 @@
+{
+  "version": "1",
+  "enabled-engines": ["flink", "postgres", "kafka", "vertx"],
+  "script": {
+    "main": "edge-baseline.sqrl"
+  },
+  "engines": {
+    "flink": {
+      "config": {
+        "table.exec.source.idle-timeout": "1 s"
+      },
+      "deployment": {
+        "jobmanager-size": "dev",
+        "taskmanager-size": "small",
+        "taskmanager-count": 1
+      }
+    },
+    "postgres": {
+      "deployment": {
+        "instance-size": "dev"
+      }
+    },
+    "vertx": {
+      "deployment": {
+        "instance-size": "dev",
+        "instance-count": 1
+      }
+    }
+  }
+}
