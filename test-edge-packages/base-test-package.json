@@ -1,0 +1,7 @@
+{
+  "version": "1",
+  "test-runner": {
+    "snapshot-folder": "snapshots-api",
+    "test-folder": "tests-api"
+  }
+}

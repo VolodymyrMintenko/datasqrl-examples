@@ -1,0 +1,24 @@
+/*
+  base.sqrl - fixture for the "max amount of package files" edge case.
+  A trivial datagen pipeline; the point of this folder is the package files,
+  not the SQRL.
+*/
+
+CREATE TABLE Events (
+  id STRING NOT NULL,
+  amount DOUBLE NOT NULL,
+  event_time AS NOW(),
+  WATERMARK FOR event_time AS event_time - INTERVAL '1' SECOND
+) WITH (
+  'connector' = 'datagen',
+  'rows-per-second' = '1',
+  'fields.id.kind' = 'random',
+  'fields.id.length' = '4'
+);
+
+/** Totals per id. */
+/*+query_by_all(id) */
+Totals := SELECT id, SUM(amount) AS total, COUNT(*) AS n FROM Events GROUP BY id;
+
+/*+test */
+TotalsTest := SELECT id, total, n FROM Totals ORDER BY id;
