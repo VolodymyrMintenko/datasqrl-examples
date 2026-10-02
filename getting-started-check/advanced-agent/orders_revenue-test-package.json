@@ -1,0 +1,16 @@
+{
+  "script": {
+    "config": { "environment": "test" }
+  },
+  "engines": {
+    "flink": {
+      "config": { "table.exec.source.idle-timeout": "1 s" }
+    }
+  },
+  "test-runner": {
+    "snapshot-folder": "snapshots/orders_revenue/",
+    "test-folder": "orders_revenue-api/tests",
+    "delay-sec": -1,
+    "required-checkpoints": 1
+  }
+}

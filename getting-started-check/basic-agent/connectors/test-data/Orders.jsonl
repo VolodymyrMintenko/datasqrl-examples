@@ -1,0 +1,6 @@
+{"order_id": "O1", "product_id": "P001", "quantity": 2, "unit_price": 10.0, "event_time": "2024-01-01T10:05:00.000Z"}
+{"order_id": "O2", "product_id": "P001", "quantity": 3, "unit_price": 10.0, "event_time": "2024-01-01T10:20:00.000Z"}
+{"order_id": "O3", "product_id": "P002", "quantity": 1, "unit_price": 5.0, "event_time": "2024-01-01T10:40:00.000Z"}
+{"order_id": "O4", "product_id": "P001", "quantity": 1, "unit_price": 10.0, "event_time": "2024-01-01T11:10:00.000Z"}
+{"order_id": "O5", "product_id": "P002", "quantity": 2, "unit_price": 5.0, "event_time": "2024-01-01T11:15:00.000Z"}
+{"order_id": "O6", "product_id": "P002", "quantity": 4, "unit_price": 5.0, "event_time": "2024-01-01T11:50:00.000Z"}

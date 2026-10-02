@@ -1,0 +1,13 @@
+{
+  "version": "1",
+  "enabled-engines": ["flink", "postgres", "vertx"],
+  "script": {
+    "main": "orders.sqrl"
+  },
+  "compiler": {
+    "api": {
+      "protocols": ["GRAPHQL", "REST", "MCP"],
+      "endpoints": "FULL"
+    }
+  }
+}

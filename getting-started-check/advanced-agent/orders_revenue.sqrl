@@ -1,0 +1,190 @@
+IMPORT connectors.sources-{{environment}} AS sources;
+
+/* ========================================
+   PART 1: Deduplication of the Order Stream
+   ======================================== */
+
+/** Deduplicated orders, one row per order_id keeping the copy with the latest ordered_at
+    (TR-1, FR-2). Served for spot checks through the Orders API function below.
+    customer_id stays on this table (future customer analytics) but is never projected
+    into an API-facing table (NFR-4). Retained 30 days per NFR-3 — a retried/replayed
+    order older than that is no longer available for lookup. */
+/*+ttl(30 days) */
+_DedupedOrders := DISTINCT sources.Orders ON order_id ORDER BY ordered_at DESC;
+
+/* Append-only (first-row) dedup of the same key, ordered ascending, for the revenue
+   path: the window table-valued function in Part 3 requires an insert-only input, while
+   the latest-wins DISTINCT above emits retractions. Retries are producer resends of the
+   same immutable event (see source section), so both dedup forms are assumed to agree
+   on revenue-relevant fields (see plan Technical Decisions). Kept private: feeds only
+   the order-line/aggregation pipeline, never queried directly. */
+_FirstOrders := SELECT order_id, customer_id, ordered_at, currency, items
+                FROM (
+                  SELECT *, ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY ordered_at ASC) AS _rownum
+                  FROM sources.Orders
+                )
+                WHERE _rownum = 1;
+
+/* ========================================
+   PART 2: Order Lines
+   ======================================== */
+
+/* Flatten the items array of the append-only deduplicated stream into order lines
+   (TR-2, EK-2), computing revenue = quantity * unit_price per line. */
+_OrderLineAll := SELECT
+    o.order_id,
+    o.ordered_at,
+    o.currency,
+    i.product_id,
+    i.quantity,
+    i.unit_price,
+    i.quantity * i.unit_price AS revenue
+FROM _FirstOrders o
+CROSS JOIN UNNEST(o.items) AS i(product_id, quantity, unit_price);
+
+/* Lines with a non-positive quantity or a negative unit_price would silently distort a
+   product-hour sum, so they are excluded from the revenue path here and captured by
+   DQ_OrderLine_Invalid_Amount below instead. */
+_OrderLine := SELECT * FROM _OrderLineAll WHERE quantity > 0 AND unit_price >= 0;
+
+/* ========================================
+   PART 3: Hourly Revenue per Product
+   ======================================== */
+
+/* 1-hour tumbling window on ordered_at (UTC, OQ-3), grouped by product_id (TR-3, FR-3).
+   Retained 13 months per NFR-3 (395 days, the ttl hint's largest supported unit is days).
+   Index matches the only access pattern of FR-4: filter by product_id, newest hour first. */
+/*+primary_key(product_id, hour), ttl(395 days), index(BTREE, product_id ASC, hour DESC) */
+_HourlyProductRevenue := SELECT
+    product_id,
+    window_start AS `hour`,
+    SUM(revenue) AS revenue,
+    SUM(quantity) AS units,
+    COUNT(DISTINCT order_id) AS orders
+FROM TABLE(
+    TUMBLE(
+        TABLE _OrderLine,
+        DESCRIPTOR(ordered_at),
+        INTERVAL '1' HOUR
+    )
+)
+GROUP BY product_id, window_start, window_end;
+
+/* ========================================
+   API Interface
+   ======================================== */
+
+/** Hourly revenue per product. All arguments are optional; each filter applies only
+    when supplied. from_hour/to_hour bound `hour` inclusively. Ordered by hour descending,
+    then product_id ascending as a deterministic tiebreaker. The row-limit parameter from
+    the requirements (`limit`) is served by the generated `limit`/`offset` query arguments. */
+-- Passthrough: the from_hour/to_hour bound compares a stored UTC wall-clock column
+-- (hour, TIMESTAMP WITHOUT TIME ZONE) against a zone-aware argument. Explicit
+-- timezone('UTC', hour) forces that comparison to happen in UTC regardless of the
+-- serving connection's session time zone, instead of a plain CAST (which converts
+-- through the session zone and silently shifts the bound).
+/*+engine(postgres) */
+HourlyProductRevenue(product_id STRING, from_hour TIMESTAMP_LTZ(3), to_hour TIMESTAMP_LTZ(3))
+    RETURNS (product_id STRING NOT NULL, `hour` TIMESTAMP(3) NOT NULL, revenue DECIMAL(38, 2) NOT NULL, units INT NOT NULL, orders BIGINT NOT NULL) :=
+    SELECT "product_id", "hour", "revenue", "units", "orders"
+    FROM "_HourlyProductRevenue"
+    WHERE (:product_id IS NULL OR "product_id" = :product_id)
+      AND (:from_hour IS NULL OR timezone('UTC', "hour") >= CAST(:from_hour AS TIMESTAMPTZ))
+      AND (:to_hour IS NULL OR timezone('UTC', "hour") <= CAST(:to_hour AS TIMESTAMPTZ))
+    ORDER BY "hour" DESC, "product_id" ASC;
+
+/** Deduplicated orders for spot checks. Optional order_id filters to a single order;
+    omitted, returns every deduplicated order newest first. customer_id is never
+    returned (NFR-4). */
+Orders(order_id STRING) :=
+    SELECT order_id, CAST(ordered_at AS TIMESTAMP(3)) AS ordered_at, currency, items
+    FROM _DedupedOrders
+    WHERE :order_id IS NULL OR order_id = :order_id
+    ORDER BY ordered_at DESC, order_id ASC;
+
+/* ========================================
+   DATA QUALITY TABLES
+   ======================================== */
+
+/** DQ: order lines with a non-positive quantity or a negative unit_price, excluded from
+    the revenue path. Such a line would silently subtract from or distort revenue/units
+    for a product-hour; because revenue is a sum, no other signal shows which line caused
+    it. Merchandising operations reconciles these rows with the producing service. */
+/*+query_by_any(product_id, order_id), primary_key(order_id, product_id) */
+DQ_OrderLine_Invalid_Amount := SELECT order_id, product_id, quantity, unit_price, CAST(ordered_at AS TIMESTAMP(3)) AS ordered_at
+    FROM _OrderLineAll
+    WHERE quantity <= 0 OR unit_price < 0
+    ORDER BY ordered_at DESC, order_id ASC, product_id ASC;
+
+/** DQ: deduplicated orders whose currency is present and not USD. Currency conversion is
+    out of scope (SC-OUT) and every order is summed as if it were USD (OQ-4); a non-empty
+    row here means that assumption is false and every affected product-hour is silently
+    wrong. Finance decides whether conversion must be brought into scope. */
+/*+query_by_any(currency), primary_key(order_id) */
+DQ_Orders_NonUSD_Currency := SELECT order_id, currency, CAST(ordered_at AS TIMESTAMP(3)) AS ordered_at
+    FROM _DedupedOrders
+    WHERE currency IS NOT NULL AND currency <> 'USD'
+    ORDER BY ordered_at DESC, order_id ASC;
+
+/* ========================================
+   OBSERVABILITY
+   ======================================== */
+
+/** OB: hourly count of received order records and distinct order_id values, counted on
+    the raw source stream before deduplication and before the revenue filters. The gap
+    between the two counts is the duplicate rate of the at-least-once topic — the one
+    upstream behaviour this pipeline is built to absorb. A missing or collapsed hour
+    means ingestion stopped while the aggregate quietly keeps serving the last complete
+    hours. */
+/*+primary_key(hour) */
+OB_OrderIngestionStats := SELECT
+    window_start AS `hour`,
+    COUNT(*) AS record_count,
+    COUNT(DISTINCT order_id) AS distinct_order_count
+FROM TABLE(
+    TUMBLE(
+        TABLE sources.Orders,
+        DESCRIPTOR(ordered_at),
+        INTERVAL '1' HOUR
+    )
+)
+GROUP BY window_start, window_end
+ORDER BY window_start DESC;
+
+/* ========================================
+   TEST QUERIES
+   ======================================== */
+
+/*+test */
+DedupedOrdersTest := SELECT order_id, CAST(ordered_at AS TIMESTAMP(3)) AS ordered_at, currency
+    FROM _DedupedOrders
+    ORDER BY order_id ASC;
+
+/*+test */
+HourlyProductRevenueTest := SELECT product_id, `hour`, revenue, units, orders
+    FROM _HourlyProductRevenue
+    ORDER BY `hour` DESC, product_id ASC;
+
+/*+test(no_rows) */
+DedupedOrdersNoDuplicatesTest := SELECT order_id, COUNT(*) AS num
+    FROM _DedupedOrders
+    GROUP BY order_id
+    HAVING COUNT(*) > 1;
+
+/*+test(no_rows) */
+HourlyRevenueNoNegativeTest := SELECT * FROM _HourlyProductRevenue WHERE revenue < 0;
+
+/*+test */
+DQOrderLineInvalidAmountTest := SELECT order_id, product_id, quantity, unit_price
+    FROM DQ_OrderLine_Invalid_Amount
+    ORDER BY order_id ASC, product_id ASC;
+
+/*+test */
+DQOrdersNonUSDCurrencyTest := SELECT order_id, currency
+    FROM DQ_Orders_NonUSD_Currency
+    ORDER BY order_id ASC;
+
+/*+test */
+OBOrderIngestionStatsTest := SELECT `hour`, record_count, distinct_order_count
+    FROM OB_OrderIngestionStats
+    ORDER BY `hour` DESC;

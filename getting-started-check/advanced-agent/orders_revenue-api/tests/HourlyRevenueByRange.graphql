@@ -1,0 +1,9 @@
+query HourlyRevenueByRange {
+  HourlyProductRevenue(from_hour: "2026-09-30T11:00:00.000Z", to_hour: "2026-09-30T12:00:00.000Z") {
+    product_id
+    hour
+    revenue
+    units
+    orders
+  }
+}

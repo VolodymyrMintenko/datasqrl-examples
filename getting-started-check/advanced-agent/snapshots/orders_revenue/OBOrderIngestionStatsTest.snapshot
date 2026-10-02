@@ -1,0 +1,17 @@
+{
+  "data" : {
+    "OBOrderIngestionStatsTest" : [ {
+      "hour" : "2026-09-30T12:00:00.000Z",
+      "record_count" : 4,
+      "distinct_order_count" : 4
+    }, {
+      "hour" : "2026-09-30T11:00:00.000Z",
+      "record_count" : 2,
+      "distinct_order_count" : 2
+    }, {
+      "hour" : "2026-09-30T10:00:00.000Z",
+      "record_count" : 4,
+      "distinct_order_count" : 3
+    } ]
+  }
+}

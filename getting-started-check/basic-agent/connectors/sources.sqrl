@@ -1,0 +1,10 @@
+-- Schema tables only: physical payload columns shared by every environment.
+-- No connector, no WATERMARK, no METADATA, no computed columns here.
+
+/** An order line item: one product purchased within an order. */
+CREATE TABLE _Orders_schema (
+  order_id STRING NOT NULL,
+  product_id STRING NOT NULL,
+  quantity INT NOT NULL,
+  unit_price DOUBLE NOT NULL
+);

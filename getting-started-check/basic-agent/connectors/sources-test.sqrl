@@ -1,0 +1,13 @@
+IMPORT sources.*;
+
+-- Test source: filesystem stand-in for the production Kafka stream.
+-- event_time is a physical column in the test data (mirrors the prod metadata timestamp).
+CREATE TABLE Orders (
+  event_time TIMESTAMP_LTZ(3) NOT NULL,
+  WATERMARK FOR event_time AS event_time - INTERVAL '1' SECOND
+) WITH (
+    'connector' = 'filesystem',
+    'path' = '${DATA_PATH}/Orders.jsonl',
+    'format' = 'flexible-json',
+    'flexible-json.timestamp-format.standard' = 'ISO-8601'
+) LIKE _Orders_schema;

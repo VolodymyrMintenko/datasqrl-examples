@@ -1,0 +1,17 @@
+{
+  "script": {
+    "config": { "environment": "prod" }
+  },
+  "engines": {
+    "flink": {
+      "config": {
+        "table.exec.state.ttl": "30 d"
+      },
+      "deployment": {
+        "jobmanager-size": "small",
+        "taskmanager-size": "medium",
+        "taskmanager-count": 2
+      }
+    }
+  }
+}

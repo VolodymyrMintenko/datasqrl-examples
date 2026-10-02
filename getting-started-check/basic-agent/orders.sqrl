@@ -1,0 +1,23 @@
+IMPORT connectors.sources-{{environment}} AS sources;
+
+/** Hourly revenue per product, aggregated from the real-time order stream.
+    revenue is the total sales amount (quantity * unit_price) per product per hour. */
+/*+primary_key(product_id, hour_start), query_by_any(product_id, hour_start) */
+HourlyRevenueByProduct := SELECT
+    product_id,
+    TUMBLE_START(event_time, INTERVAL '1' HOUR) AS hour_start,
+    SUM(quantity * unit_price) AS revenue,
+    COUNT(*) AS order_count
+  FROM sources.Orders
+  GROUP BY product_id, TUMBLE(event_time, INTERVAL '1' HOUR);
+
+/** Hourly revenue for a single product, ordered by hour. */
+RevenueForProduct(product_id STRING NOT NULL) := SELECT product_id, hour_start, revenue, order_count
+  FROM HourlyRevenueByProduct
+  WHERE product_id = :product_id
+  ORDER BY hour_start;
+
+/*+test */
+HourlyRevenueByProductTest := SELECT product_id, hour_start, revenue, order_count
+  FROM HourlyRevenueByProduct
+  ORDER BY product_id, hour_start;

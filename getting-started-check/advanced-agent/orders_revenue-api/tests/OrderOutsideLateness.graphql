@@ -1,0 +1,12 @@
+query OrderOutsideLateness {
+  Orders(order_id: "O-008") {
+    order_id
+    ordered_at
+    currency
+    items {
+      product_id
+      quantity
+      unit_price
+    }
+  }
+}

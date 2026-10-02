@@ -1,0 +1,16 @@
+IMPORT sources.*;
+
+-- Production source: real-time order stream from Kafka.
+-- Event time comes from the Kafka record's metadata timestamp.
+CREATE TABLE Orders (
+  event_time TIMESTAMP_LTZ(3) NOT NULL METADATA FROM 'timestamp',
+  WATERMARK FOR event_time AS event_time - INTERVAL '1' SECOND
+) WITH (
+    'connector' = 'kafka-safe',
+    'topic' = 'orders',
+    'properties.bootstrap.servers' = '${KAFKA_BOOTSTRAP_SERVERS}',
+    'properties.group.id' = '${DEPLOYMENT_ID}',
+    'scan.startup.mode' = 'latest-offset',
+    'format' = 'flexible-json',
+    'scan.deser-failure.handler' = 'log'
+) LIKE _Orders_schema;

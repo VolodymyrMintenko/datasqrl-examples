@@ -1,0 +1,15 @@
+-- Test connector: filesystem stand-in for the `orders` Kafka topic, reading static JSONL.
+-- Mirrors production exactly in watermark column and interval (ordered_at, 5 minutes),
+-- since production takes its event time from Kafka record metadata (case (a) in the
+-- /manage-connector skill) the test file supplies ordered_at as a plain physical column.
+IMPORT sources.*;
+
+CREATE TABLE Orders (
+    ordered_at TIMESTAMP_LTZ(3) NOT NULL,
+    WATERMARK FOR ordered_at AS ordered_at - INTERVAL '5' MINUTE
+) WITH (
+    'connector' = 'filesystem',
+    'path' = '${DATA_PATH}/orders.jsonl',
+    'format' = 'flexible-json',
+    'flexible-json.timestamp-format.standard' = 'ISO-8601'
+) LIKE _Orders_schema;

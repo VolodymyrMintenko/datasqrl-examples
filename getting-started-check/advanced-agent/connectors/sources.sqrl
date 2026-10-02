@@ -1,0 +1,19 @@
+/**
+  Payload schema of the `orders` Kafka topic (JSON, no schema registry, no envelope).
+  Shared by every environment's connector table through `LIKE`; carries only physical
+  payload columns — no connector options, no watermark, no computed/metadata column.
+ */
+CREATE TABLE _Orders_schema (
+    /** Primary/dedup key of an order (FR-2); also the Kafka partition key in production. */
+    order_id STRING NOT NULL,
+    /** Pseudonymous customer identifier, null for guest checkout. Never exposed by the
+        API (NFR-4) — carried on the ingested table only, excluded from every projection
+        that can reach a client. */
+    customer_id STRING,
+    /** Currency code of the order, optional and defaulting to USD at the application
+        level. Ignored for revenue (OQ-4); used only by the non-USD data-quality capture. */
+    currency STRING,
+    /** Order lines. Never empty. Flattened downstream into one row per product
+        (TR-2, EK-2); quantity and unit_price feed the revenue computation. */
+    items ARRAY<ROW<product_id STRING NOT NULL, quantity INT NOT NULL, unit_price DECIMAL(10, 2) NOT NULL>> NOT NULL
+);

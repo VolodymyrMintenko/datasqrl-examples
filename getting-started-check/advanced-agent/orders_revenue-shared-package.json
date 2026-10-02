@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "enabled-engines": ["flink", "postgres", "vertx"],
+  "script": {
+    "main": "orders_revenue.sqrl"
+  },
+  "engines": {
+    "flink": {
+      "config": {
+        "execution.runtime-mode": "STREAMING",
+        "table.exec.source.idle-timeout": "30 s",
+        "table.local-time-zone": "UTC"
+      }
+    }
+  },
+  "compiler": {
+    "api": { "protocols": ["GRAPHQL", "REST", "MCP"], "endpoints": "FULL" }
+  }
+}

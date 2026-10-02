@@ -1,0 +1,18 @@
+-- Production connector: the `orders` Kafka topic, external source (no mutation/write path exists).
+IMPORT sources.*;
+
+CREATE TABLE Orders (
+    ordered_at TIMESTAMP_LTZ(3) NOT NULL METADATA FROM 'timestamp',
+    WATERMARK FOR ordered_at AS ordered_at - INTERVAL '5' MINUTE
+) WITH (
+    'connector' = 'kafka-safe',
+    'topic' = 'orders',
+    'properties.bootstrap.servers' = '${ORDERS_KAFKA_BROKERS}',
+    'properties.group.id' = '${DEPLOYMENT_ID}-orders',
+    'properties.security.protocol' = 'SASL_SSL',
+    'properties.sasl.mechanism' = 'PLAIN',
+    'properties.sasl.jaas.config' = 'org.apache.kafka.common.security.plain.PlainLoginModule required username="${ORDERS_KAFKA_USERNAME}" password="${{ORDERS_KAFKA_PASSWORD}}";',
+    'value.format' = 'flexible-json',
+    'value.flexible-json.timestamp-format.standard' = 'ISO-8601',
+    'scan.deser-failure.handler' = 'log'
+) LIKE _Orders_schema;

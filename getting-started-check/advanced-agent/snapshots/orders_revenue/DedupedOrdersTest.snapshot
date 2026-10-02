@@ -1,0 +1,45 @@
+{
+  "data" : {
+    "DedupedOrdersTest" : [ {
+      "order_id" : "O-001",
+      "ordered_at" : "2026-09-30T10:06:30.000Z",
+      "currency" : "USD"
+    }, {
+      "order_id" : "O-002",
+      "ordered_at" : "2026-09-30T10:20:00.000Z",
+      "currency" : "USD"
+    }, {
+      "order_id" : "O-003",
+      "ordered_at" : "2026-09-30T10:40:00.000Z",
+      "currency" : null
+    }, {
+      "order_id" : "O-004",
+      "ordered_at" : "2026-09-30T11:10:00.000Z",
+      "currency" : "USD"
+    }, {
+      "order_id" : "O-005",
+      "ordered_at" : "2026-09-30T11:30:00.000Z",
+      "currency" : "USD"
+    }, {
+      "order_id" : "O-006",
+      "ordered_at" : "2026-09-30T12:15:00.000Z",
+      "currency" : "USD"
+    }, {
+      "order_id" : "O-007",
+      "ordered_at" : "2026-09-30T12:13:00.000Z",
+      "currency" : "USD"
+    }, {
+      "order_id" : "O-008",
+      "ordered_at" : "2026-09-30T11:55:00.000Z",
+      "currency" : "USD"
+    }, {
+      "order_id" : "O-009",
+      "ordered_at" : "2026-09-30T12:20:00.000Z",
+      "currency" : "USD"
+    }, {
+      "order_id" : "O-010",
+      "ordered_at" : "2026-09-30T12:25:00.000Z",
+      "currency" : "EUR"
+    } ]
+  }
+}

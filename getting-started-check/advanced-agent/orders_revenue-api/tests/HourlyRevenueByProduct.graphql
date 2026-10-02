@@ -1,0 +1,9 @@
+query HourlyRevenueByProduct {
+  HourlyProductRevenue(product_id: "p-3391") {
+    product_id
+    hour
+    revenue
+    units
+    orders
+  }
+}

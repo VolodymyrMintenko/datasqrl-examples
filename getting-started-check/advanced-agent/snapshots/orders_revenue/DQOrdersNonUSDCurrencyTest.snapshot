@@ -1,0 +1,8 @@
+{
+  "data" : {
+    "DQOrdersNonUSDCurrencyTest" : [ {
+      "order_id" : "O-010",
+      "currency" : "EUR"
+    } ]
+  }
+}

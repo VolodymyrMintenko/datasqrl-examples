@@ -1,0 +1,41 @@
+{
+  "data" : {
+    "HourlyProductRevenueTest" : [ {
+      "product_id" : "p-1120",
+      "hour" : "2026-09-30T12:00:00.000Z",
+      "revenue" : 139.0,
+      "units" : 2,
+      "orders" : 2
+    }, {
+      "product_id" : "p-3391",
+      "hour" : "2026-09-30T12:00:00.000Z",
+      "revenue" : 25.0,
+      "units" : 2,
+      "orders" : 1
+    }, {
+      "product_id" : "p-3391",
+      "hour" : "2026-09-30T11:00:00.000Z",
+      "revenue" : 50.0,
+      "units" : 4,
+      "orders" : 1
+    }, {
+      "product_id" : "p-7742",
+      "hour" : "2026-09-30T11:00:00.000Z",
+      "revenue" : 14.5,
+      "units" : 2,
+      "orders" : 1
+    }, {
+      "product_id" : "p-1120",
+      "hour" : "2026-09-30T10:00:00.000Z",
+      "revenue" : 119.0,
+      "units" : 4,
+      "orders" : 2
+    }, {
+      "product_id" : "p-3391",
+      "hour" : "2026-09-30T10:00:00.000Z",
+      "revenue" : 37.5,
+      "units" : 3,
+      "orders" : 2
+    } ]
+  }
+}
