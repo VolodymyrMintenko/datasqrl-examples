@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "engines": {
+    "flink": {
+      "config": {
+        "table.exec.sink.not-null-enforcer": "DROP"
+      }
+    }
+  }
+}

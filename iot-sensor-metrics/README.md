@@ -34,6 +34,7 @@ mutation AddReading {
 }
 ```
 
+
 Run the query a few times to add some data. Feel free to change the temperature and sensor id.
 
 Once you are done, hit CTRL-C.

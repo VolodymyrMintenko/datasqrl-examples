@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "engines": {
+    "flink": {
+      "config": {
+        "pipeline.object-reuse": "true"
+      }
+    }
+  }
+}

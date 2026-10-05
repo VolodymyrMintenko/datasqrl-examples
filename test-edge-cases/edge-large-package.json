@@ -1,0 +1,19 @@
+{
+  "version": "1",
+  "enabled-engines": [
+    "flink",
+    "postgres",
+    "kafka",
+    "vertx"
+  ],
+  "script": {
+    "main": "edge-large.sqrl"
+  },
+  "engines": {
+    "flink": {
+      "config": {
+        "table.exec.source.idle-timeout": "1 s"
+      }
+    }
+  }
+}

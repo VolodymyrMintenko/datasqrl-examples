@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "engines": {
+    "flink": {
+      "config": {
+        "table.optimizer.join-reorder-enabled": "true"
+      }
+    }
+  }
+}
